@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     fs::write(&out, xq_status.stdout)?;
-    println!("Wrote {}", out);
+    println!("Write {}", out);
 
     Ok(())
 }
