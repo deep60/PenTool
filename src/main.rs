@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -9,14 +10,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
 
+    // Create output directory if it doesn't exist
+    let out_dir = Path::new("out");
+    if !out_dir.exists() {
+        fs::create_dir(out_dir)?;
+        println!("Created output directory: {:?}", out_dir);
+    }
+
     let name = format!("nmap-osccan.{}", args.join(" "));
-    let tmp = "/tmp/.n";
-    let out = format!("../out/{}", name);
+    let tmp = format!("{}/.nmap_output.xml", env::temp_dir().to_str().unwrap());
+    let out = format!("out/{}", name);
 
     println!("Running nmap...");
     let nmap_status = Command::new("nmap")
         .arg("-oX")
-        .arg(tmp)
+        .arg(&tmp)
         .arg("-T4")
         .arg("-A")
         .args(&args)
@@ -27,34 +35,35 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
 
-    println!("Validating XML output...");
-    let validate_status = Command::new("xmllint")
-        .arg("--noout")
-        .arg(tmp)
-        .status()?;
-
-    if !validate_status.success() {
-        eprintln!("XML validation failed.");
+    // Verify the temporary file was created
+    if !Path::new(&tmp).exists() {
+        eprintln!("Error: Temporary file not created at {}", tmp);
         std::process::exit(1);
     }
 
-    println!("Converting output with xq..");
-    let xq_status = Command::new("xq")
-        .arg("--input-format")
-        .arg("xml")
-        .arg(tmp)
+    println!("Converting output with jq..");
+    let jq_status = Command::new("jq")
+        .arg("-R")
+        .arg("-s")
+        .arg(".")
+        .arg(&tmp)
         .output()?;
 
-    if !xq_status.status.success() {
+    if !jq_status.status.success() {
         eprintln!(
-            "xq command failed: {}",
-            String::from_utf8_lossy(&xq_status.stderr)
+            "jq command failed: {}",
+            String::from_utf8_lossy(&jq_status.stderr)
         );
         std::process::exit(1);
     }
 
-    fs::write(&out, xq_status.stdout)?;
+    fs::write(&out, jq_status.stdout)?;
     println!("Write {}", out);
+
+    // Clean up temporary file
+    if let Err(e) = fs::remove_file(&tmp) {
+        eprintln!("Warning: Failed to remove temporary file {}: {}", tmp, e);
+    }
 
     Ok(())
 }
