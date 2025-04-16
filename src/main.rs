@@ -1,6 +1,5 @@
 use std::env;
 use std::fs;
-use std::path::Path;
 use std::process::Command;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -28,11 +27,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(1);
     }
 
+    println!("Validating XML output...");
+    let validate_status = Command::new("xmllint")
+        .arg("--noout")
+        .arg(tmp)
+        .status()?;
+
+    if !validate_status.success() {
+        eprintln!("XML validation failed.");
+        std::process::exit(1);
+    }
+
     println!("Converting output with xq..");
     let xq_status = Command::new("xq")
-        .arg("--from-file")
+        .arg("--input-format")
+        .arg("xml")
         .arg(tmp)
-        .arg(".")
         .output()?;
 
     if !xq_status.status.success() {
