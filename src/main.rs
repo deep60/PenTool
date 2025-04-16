@@ -22,6 +22,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out = format!("out/{}", name);
 
     println!("Running nmap...");
+    println!("Note: This might require elevated privileges. If the scan hangs, try running with sudo.");
+    
     let nmap_output = Command::new("nmap")
         .arg("-oX")
         .arg(&tmp)
@@ -34,6 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Check if nmap command failed
     if !nmap_output.status.success() {
         eprintln!("nmap command failed: {}", String::from_utf8_lossy(&nmap_output.stderr));
+        eprintln!("If you're getting permission errors, try running with sudo.");
         std::process::exit(1);
     }
 
@@ -43,7 +46,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Verify the temporary file was created
     if !Path::new(&tmp).exists() {
         eprintln!("Error: Temporary file not created at {}", tmp);
-        eprintln!("This might be because no hosts were found in the scan.");
+        eprintln!("This might be because no hosts were found in the scan or due to permission issues.");
+        eprintln!("Try running with sudo: sudo cargo run -- 192.168.1.0/24");
         std::process::exit(1);
     }
 
