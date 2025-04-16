@@ -29,7 +29,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("Converting output with xq..");
-    let xq_status = Command::new("xq").arg("--xml-file").arg(tmp).output()?;
+    let xq_status = Command::new("xq")
+        .arg("--from-file")
+        .arg(tmp)
+        .arg(".")
+        .output()?;
 
     if !xq_status.status.success() {
         eprintln!(
