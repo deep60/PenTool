@@ -22,22 +22,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out = format!("out/{}", name);
 
     println!("Running nmap...");
-    let nmap_status = Command::new("nmap")
+    let nmap_output = Command::new("nmap")
         .arg("-oX")
         .arg(&tmp)
         .arg("-T4")
         .arg("-A")
+        .arg("-Pn")
         .args(&args)
-        .status()?;
+        .output()?;
 
-    if !nmap_status.success() {
-        eprintln!("nmap command failed.");
+    // Check if nmap command failed
+    if !nmap_output.status.success() {
+        eprintln!("nmap command failed: {}", String::from_utf8_lossy(&nmap_output.stderr));
         std::process::exit(1);
     }
+
+    // Print nmap output for debugging
+    println!("Nmap output: {}", String::from_utf8_lossy(&nmap_output.stdout));
 
     // Verify the temporary file was created
     if !Path::new(&tmp).exists() {
         eprintln!("Error: Temporary file not created at {}", tmp);
+        eprintln!("This might be because no hosts were found in the scan.");
         std::process::exit(1);
     }
 
